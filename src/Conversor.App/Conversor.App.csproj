@@ -15,11 +15,11 @@
     <RootNamespace>Conversor.App</RootNamespace>
     <AssemblyName>Conversor</AssemblyName>
 
-    <ApplicationTitle>Conversor</ApplicationTitle>
+    <ApplicationTitle>Conversor JPG, PDF, HEIC, TIFF</ApplicationTitle>
     <ApplicationId>com.gabrielwlopes.conversor</ApplicationId>
     <!-- Aumente os dois a cada nova versão (o número de baixo precisa sempre crescer para o Android aceitar a atualização). -->
-    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.1</ApplicationDisplayVersion>
+    <ApplicationVersion>2</ApplicationVersion>
 
     <!-- Celulares de 64 e 32 bits. -->
     <RuntimeIdentifiers>android-arm64;android-arm</RuntimeIdentifiers>

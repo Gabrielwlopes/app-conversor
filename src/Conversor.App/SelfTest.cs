@@ -5,11 +5,13 @@
 
 using System.IO.Compression;
 using System.Text.RegularExpressions;
+using Conversor.App.Compression;
 using Android.Content;
 using Conversor.App.Conversion;
 using Conversor.Core;
 using Conversor.Core.Tiff;
 using Bitmap = Android.Graphics.Bitmap;
+using CompressionLevel = Conversor.Core.CompressionLevel; // não confundir com o System.IO.Compression.CompressionLevel
 using BitmapFactory = Android.Graphics.BitmapFactory;
 using Canvas = Android.Graphics.Canvas;
 using Color = Android.Graphics.Color;
@@ -61,6 +63,7 @@ internal static class SelfTest
         var scanPdf = Sample(folder, "Digitalizado.pdf", FileFormats.Pdf, path => ScannedPdf(path));
         var photo = Sample(folder, "Foto da viagem.jpg", FileFormats.Jpg, path => SaveBitmap(Photo(900, 600), path, Bitmap.CompressFormat.Jpeg!));
         var logo = Sample(folder, "Logo.png", FileFormats.Png, path => SaveBitmap(Logo(400), path, Bitmap.CompressFormat.Png!));
+        var bigPhoto = Sample(folder, "Foto grande.jpg", FileFormats.Jpg, path => SaveBitmap(Photo(3000, 2000), path, Bitmap.CompressFormat.Jpeg!, 97));
         var tiff = Sample(folder, "Scanner.tiff", FileFormats.Tiff, path =>
         {
             var bitmap = Photo(640, 480);
@@ -162,11 +165,51 @@ internal static class SelfTest
             return $"{pdf.NumberOfPages} páginas, {new FileInfo(file.LocalPath).Length / 1024} KB";
         });
 
+        await Step("comprimir PDF digitalizado (forte)", async () =>
+        {
+            var file = await Compress(scanPdf, CompressionLevel.Strong, folder);
+            var after = new FileInfo(file.LocalPath).Length;
+            Expect(!file.NotSmaller && after < scanPdf.Size, $"não diminuiu: {scanPdf.Size} → {after} bytes");
+            Expect(file.Name == "Digitalizado_comprimido.pdf", "nome: " + file.Name);
+            using var pdf = UglyToad.PdfPig.PdfDocument.Open(file.LocalPath);
+            Expect(pdf.NumberOfPages == 1, "páginas: " + pdf.NumberOfPages);
+            return $"{scanPdf.Size / 1024} KB → {after / 1024} KB";
+        });
+
+        await Step("comprimir PDF de texto (o texto continua)", async () =>
+        {
+            var file = await Compress(textPdf, CompressionLevel.Balanced, folder);
+            using var pdf = UglyToad.PdfPig.PdfDocument.Open(file.LocalPath);
+            Expect(pdf.NumberOfPages == 2, "páginas: " + pdf.NumberOfPages);
+            var text = string.Concat(pdf.GetPage(1).Letters.Select(l => l.Value));
+            Expect(text.Contains("Relat"), "o texto sumiu: " + text[..Math.Min(80, text.Length)]);
+            return $"{textPdf.Size / 1024} KB → {new FileInfo(file.LocalPath).Length / 1024} KB{(file.NotSmaller ? " (já otimizado)" : "")}";
+        });
+
+        await Step("comprimir foto grande (média)", async () =>
+        {
+            var file = await Compress(bigPhoto, CompressionLevel.Balanced, folder);
+            var (w, h) = Size(file.LocalPath);
+            var after = new FileInfo(file.LocalPath).Length;
+            Expect(w == 2560 && h == 1707, $"tamanho {w}×{h}");
+            Expect(after < bigPhoto.Size && file.Format == FileFormats.Jpg, $"não diminuiu: {bigPhoto.Size} → {after}");
+            return $"3000×2000 {bigPhoto.Size / 1024} KB → {w}×{h} {after / 1024} KB";
+        });
+
+        await Step("comprimir PNG com transparência", async () =>
+        {
+            var file = await Compress(logo, CompressionLevel.Strong, folder);
+            Expect(file.Format == FileFormats.Png, "virou " + file.Format.Id);
+            Expect(new FileInfo(file.LocalPath).Length <= logo.Size, "ficou maior que o original");
+            return file.NotSmaller ? "já estava otimizado (cópia do original)" : $"{new FileInfo(file.LocalPath).Length / 1024} KB";
+        });
+
         await Step("salvar em Downloads", () =>
         {
             var source = Path.Combine(folder, "salvar.txt");
             File.WriteAllText(source, "autoteste");
             var saved = Downloads.Save(context, new ConvertedFile(source, "autoteste-conversor.txt", FileFormats.Txt));
+            Expect(saved.Size == 9, "tamanho salvo: " + saved.Size);
             var removed = context.ContentResolver!.Delete(saved.Uri, null, null);
             return Task.FromResult($"{saved.Name} ({saved.Uri}), removido: {removed}");
         });
@@ -177,9 +220,16 @@ internal static class SelfTest
 
     // ───────────── Conversões ─────────────
 
-    private static async Task<List<ConvertedFile>> Run(IReadOnlyList<PickedFile> inputs, FileFormat target, string folder)
+    private static Task<List<ConvertedFile>> Run(IReadOnlyList<PickedFile> inputs, FileFormat target, string folder) =>
+        Run(inputs, new TargetOption(target, ""), CompressionLevel.Balanced, folder);
+
+    private static async Task<ConvertedFile> Compress(PickedFile input, CompressionLevel level, string folder) =>
+        (await Run([input], new TargetOption(input.Format, "", Compress: true), level, folder)).Single();
+
+    private static async Task<List<ConvertedFile>> Run(IReadOnlyList<PickedFile> inputs, TargetOption target,
+        CompressionLevel level, string folder)
     {
-        var result = await ConversionJob.RunAsync(inputs, target, Path.Combine(folder, "saida-" + Guid.NewGuid().ToString("N")),
+        var result = await ConversionJob.RunAsync(inputs, target, level, Path.Combine(folder, "saida-" + Guid.NewGuid().ToString("N")),
             new Progress<JobProgress>(), CancellationToken.None);
         if (result.Errors.Count > 0)
             throw new InvalidOperationException(string.Join(" | ", result.Errors));
@@ -335,10 +385,10 @@ internal static class SelfTest
         return bitmap;
     }
 
-    private static void SaveBitmap(Bitmap bitmap, string path, Bitmap.CompressFormat format)
+    private static void SaveBitmap(Bitmap bitmap, string path, Bitmap.CompressFormat format, int quality = 92)
     {
         using (var file = File.Create(path))
-            bitmap.Compress(format, 92, file);
+            bitmap.Compress(format, quality, file);
         ImageCodec.Release(bitmap);
     }
 }

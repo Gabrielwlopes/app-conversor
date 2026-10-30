@@ -1,11 +1,18 @@
-# Conversor
+# Conversor JPG, PDF, HEIC, TIFF
 
-App Android que converte arquivos direto no celular, sem internet e sem enviar nada para servidor nenhum.
+App Android que converte e comprime arquivos direto no celular, sem internet e sem enviar nada para servidor nenhum.
 
 | De | Para |
 |---|---|
 | **PDF** | **Word (DOCX)**, texto (TXT), JPG ou PNG (uma imagem por página) |
 | **Imagens**: JPG, PNG, WebP, HEIC, AVIF*, GIF, BMP, TIFF | PNG, JPG, WebP, TIFF e PDF (várias imagens viram um PDF só) |
+
+**Comprimir** (três níveis: leve, média, forte):
+
+- **PDF → PDF menor**, com o compressor do Filee adaptado para o Android: as imagens dentro do PDF são reduzidas e
+  regravadas em JPEG; texto, fontes e desenhos ficam exatamente iguais.
+- **Fotos → JPG menor** (PNG, quando a imagem tem transparência), com o lado maior limitado a 4096, 2560 ou 1600 pixels.
+- Se o arquivo já estava otimizado, sai uma cópia do original e o app avisa.
 
 \* AVIF abre a partir do Android 12. O Android não grava AVIF, por isso ele aparece só como origem.
 
@@ -50,10 +57,15 @@ src/Conversor.App/        o app Android (C#, .NET para Android)
     PdfBuilder.cs             imagens → PDF (PDFsharp, a mesma biblioteca do Filee)
     ImageConverter.cs         imagem → PNG / JPG / WebP / TIFF
     Downloads.cs              salva em Downloads/Conversor
+  Compression/              comprimir
+    Compressor.cs             PDF e fotos, nos três níveis
+    PdfCompressor.cs          compressor de PDF do Filee, adaptado (Bitmap do Android no lugar do ImageMagick)
+    PdfPictureUses.cs         copiado do Filee: onde e de que tamanho cada imagem aparece no PDF
   Ui/Kit.cs                 cores (claro/escuro) e componentes da tela
 src/Conversor.Core/       parte sem Android, testada em qualquer computador
   FileFormats.cs            reconhece o formato pelo conteúdo do arquivo
   Targets.cs                quais formatos de destino aparecem para cada arquivo
+  CompressionLevel.cs       os níveis de compressão (leve, média, forte)
   Tiff/                     leitor e gravador de TIFF (o Android não tem)
 tests/Conversor.Core.Checks/  testes do núcleo
 external/Filee/           o Filee (submódulo git, numa versão fixa)

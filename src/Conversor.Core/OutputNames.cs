@@ -31,9 +31,10 @@ public static class OutputNames
     /// </summary>
     /// <param name="page">Índice da página a partir de 0, ou null quando a entrada vira um arquivo só.</param>
     /// <param name="pageCount">Total de páginas (define quantos dígitos o número tem).</param>
-    public static string For(string? originalName, FileFormat target, int? page = null, int pageCount = 1)
+    /// <param name="suffix">Acrescentado ao nome, ex.: "_comprimido".</param>
+    public static string For(string? originalName, FileFormat target, int? page = null, int pageCount = 1, string suffix = "")
     {
-        var name = BaseName(originalName);
+        var name = BaseName(originalName) + suffix;
         if (page is { } index && pageCount > 1)
         {
             var digits = Math.Max(2, pageCount.ToString(System.Globalization.CultureInfo.InvariantCulture).Length);

@@ -1,11 +1,21 @@
 namespace Conversor.Core;
 
-/// <summary>Um formato de destino oferecido na tela.</summary>
-/// <param name="Format">O formato gravado.</param>
+/// <summary>Uma opção de destino na tela: converter para um formato, ou comprimir.</summary>
+/// <param name="Format">
+/// O formato gravado. Ao comprimir: PDF para PDFs; para imagens, JPG (ou PNG, quando a imagem tem transparência).
+/// </param>
 /// <param name="Description">Explicação curta embaixo do nome ("Word", "1 imagem por página", ...).</param>
-public sealed record TargetOption(FileFormat Format, string Description);
+/// <param name="Compress">Comprimir em vez de converter.</param>
+public sealed record TargetOption(FileFormat Format, string Description, bool Compress = false)
+{
+    /// <summary>Nome do botão.</summary>
+    public string Label => Compress ? "Comprimir" : Format.Label;
 
-/// <summary>Quais formatos de destino fazem sentido para os arquivos escolhidos.</summary>
+    /// <summary>Identifica a opção entre uma atualização da tela e outra (a descrição pode mudar).</summary>
+    public string Key => Compress ? "comprimir" : Format.Id;
+}
+
+/// <summary>Quais destinos fazem sentido para os arquivos escolhidos.</summary>
 public static class Targets
 {
     /// <summary>
@@ -26,6 +36,7 @@ public static class Targets
                 new(FileFormats.Txt, "Só o texto"),
                 new(FileFormats.Jpg, pages),
                 new(FileFormats.Png, pages),
+                new(FileFormats.Pdf, "PDF menor, mesmas páginas", Compress: true),
             ];
         }
 
@@ -41,7 +52,10 @@ public static class Targets
                 new(FileFormats.Tiff, "Sem perdas, para impressão"),
                 new(FileFormats.Pdf, sources.Count == 1 ? "Documento" : "Um PDF com todas"),
             ];
-            return options.Where(o => o.Format.Id != same).ToList();
+            options.RemoveAll(o => o.Format.Id == same);
+            options.Add(new(FileFormats.Jpg, sources.Count == 1 ? "Foto menor, mesma imagem" : "Fotos menores, mesmas imagens",
+                Compress: true));
+            return options;
         }
 
         return [];

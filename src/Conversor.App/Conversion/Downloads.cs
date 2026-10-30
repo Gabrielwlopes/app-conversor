@@ -7,7 +7,9 @@ namespace Conversor.App.Conversion;
 /// <summary>Um arquivo salvo em Downloads/Conversor.</summary>
 /// <param name="Uri">Endereço no Android, usado para abrir e compartilhar.</param>
 /// <param name="Name">Nome final (o Android acrescenta " (1)" se já existir um igual).</param>
-internal sealed record SavedFile(AUri Uri, string Name, string MimeType);
+/// <param name="Size">Tamanho em bytes.</param>
+/// <param name="NotSmaller">Ao comprimir: já estava otimizado (é uma cópia do original).</param>
+internal sealed record SavedFile(AUri Uri, string Name, string MimeType, long Size, bool NotSmaller);
 
 /// <summary>Salva na pasta Downloads/Conversor (Android 10+: não precisa de permissão).</summary>
 internal static class Downloads
@@ -40,7 +42,8 @@ internal static class Downloads
             resolver.Delete(uri, null, null);
             throw;
         }
-        return new SavedFile(uri, FinalName(resolver, uri) ?? file.Name, file.Format.MimeType);
+        return new SavedFile(uri, FinalName(resolver, uri) ?? file.Name, file.Format.MimeType,
+            new FileInfo(file.LocalPath).Length, file.NotSmaller);
     }
 
     private static string? FinalName(ContentResolver resolver, AUri uri)

@@ -68,12 +68,15 @@ Check(FileFormats.FromFileName("scan.tif") == FileFormats.Tiff, "extensão .tif"
 
 // ───────────── Destinos ─────────────
 
-var pdfTargets = Targets.For([FileFormats.Pdf]).Select(t => t.Format.Id).ToArray();
-Check(pdfTargets.SequenceEqual(["docx", "txt", "jpg", "png"]), $"destinos de PDF: {string.Join(",", pdfTargets)}");
-var jpgTargets = Targets.For([FileFormats.Jpg, FileFormats.Jpg]).Select(t => t.Format.Id).ToArray();
-Check(jpgTargets.SequenceEqual(["png", "webp", "tiff", "pdf"]), $"destinos de JPGs: {string.Join(",", jpgTargets)}");
-var mixedImages = Targets.For([FileFormats.Jpg, FileFormats.Png]).Select(t => t.Format.Id).ToArray();
-Check(mixedImages.SequenceEqual(["png", "jpg", "webp", "tiff", "pdf"]), "JPG + PNG oferecem todos os formatos de imagem");
+var pdfTargets = Targets.For([FileFormats.Pdf]).Select(t => t.Key).ToArray();
+Check(pdfTargets.SequenceEqual(["docx", "txt", "jpg", "png", "comprimir"]), $"destinos de PDF: {string.Join(",", pdfTargets)}");
+var jpgTargets = Targets.For([FileFormats.Jpg, FileFormats.Jpg]).Select(t => t.Key).ToArray();
+Check(jpgTargets.SequenceEqual(["png", "webp", "tiff", "pdf", "comprimir"]), $"destinos de JPGs: {string.Join(",", jpgTargets)}");
+var mixedImages = Targets.For([FileFormats.Jpg, FileFormats.Png]).Select(t => t.Key).ToArray();
+Check(mixedImages.SequenceEqual(["png", "jpg", "webp", "tiff", "pdf", "comprimir"]), "JPG + PNG oferecem todos os formatos de imagem");
+var compressPdf = Targets.For([FileFormats.Pdf]).Single(t => t.Compress);
+Check(compressPdf.Format == FileFormats.Pdf && compressPdf.Label == "Comprimir", "comprimir PDF grava PDF");
+Check(CompressionLevel.All.Select(l => l.PhotoMaxSide).SequenceEqual([4096, 2560, 1600]), "níveis de compressão em ordem");
 Check(Targets.For([FileFormats.Pdf, FileFormats.Jpg]).Count == 0, "PDF + imagem não têm destino comum");
 Check(Targets.For([]).Count == 0, "nada escolhido");
 
@@ -86,6 +89,7 @@ Check(OutputNames.For("doc.pdf", FileFormats.Png, 0, 1) == "doc.png", "PDF de um
 Check(OutputNames.For("a/b:c?.jpg", FileFormats.Png) == "a_b_c_.png", "caracteres proibidos");
 Check(OutputNames.For(".jpg", FileFormats.Png) == "arquivo.png", "nome vazio");
 Check(OutputNames.For(null, FileFormats.Pdf) == "arquivo.pdf", "sem nome");
+Check(OutputNames.For("contrato.pdf", FileFormats.Pdf, suffix: "_comprimido") == "contrato_comprimido.pdf", "sufixo");
 Check(OutputNames.For("Relatório v1.2 final", FileFormats.Docx) == "Relatório v1.2 final.docx", "ponto no meio do nome não é extensão");
 
 // ───────────── LZW ─────────────

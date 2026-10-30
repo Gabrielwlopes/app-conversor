@@ -34,7 +34,8 @@ public class MainActivity : Activity
     private const int PickRequest = 1;
 
     private readonly List<PickedFile> _files = [];
-    private FileFormat? _target;
+    private TargetOption? _target;
+    private CompressionLevel _level = CompressionLevel.Balanced;
     private bool _busy;
     private bool _pickAppends;
     private CancellationTokenSource? _cancel;
@@ -128,7 +129,8 @@ public class MainActivity : Activity
         var headerTop = _kit.Dp(28);
         header.SetPadding(_kit.Dp(22), headerTop, _kit.Dp(22), _kit.Dp(26));
         header.AddView(_kit.Text("Conversor", 30, Android.Graphics.Color.White, bold: true));
-        var tagline = _kit.Text("PDF para Word e imagens para PNG, JPG, WebP, TIFF ou PDF. Tudo no celular, sem internet.",
+        header.AddView(_kit.Text("JPG, PDF, HEIC, TIFF", 18, Android.Graphics.Color.White, bold: true));
+        var tagline = _kit.Text("Converta e comprima PDFs e imagens. Tudo no celular, sem internet.",
             14, Android.Graphics.Color.White);
         tagline.Alpha = 0.85f;
         header.AddView(tagline, Kit.Fill(_kit.Dp(6)));
@@ -148,7 +150,7 @@ public class MainActivity : Activity
 
         // 2. Formato de destino
         _targetsCard = _kit.Card();
-        _targetsCard.AddView(_kit.SectionTitle("2 · Converter para"));
+        _targetsCard.AddView(_kit.SectionTitle("2 · O que fazer"));
         _targetsBox = _kit.Column();
         _targetsCard.AddView(_targetsBox, Kit.Fill(_kit.Dp(12)));
         body.AddView(_targetsCard, Kit.Fill(_kit.Dp(12)));
@@ -181,7 +183,8 @@ public class MainActivity : Activity
         body.AddView(_resultCard, Kit.Fill(_kit.Dp(16)));
 
         var footer = _kit.Text(
-            "PDF para Word e para texto: motor do Filee (código aberto, licença MIT). Imagens: codificadores do Android. " +
+            "PDF para Word, para texto e compressão de PDF: motor do Filee (código aberto, licença MIT). " +
+            "Imagens: codificadores do Android. " +
             "Os arquivos convertidos ficam em Downloads › Conversor. Nada sai do seu celular.", 12, colors.Muted);
         body.AddView(footer, Kit.Fill(_kit.Dp(20)));
 
@@ -310,8 +313,7 @@ public class MainActivity : Activity
             _target = null;
             return;
         }
-        if (_target is null || options.All(o => o.Format != _target))
-            _target = options[0].Format;
+        _target = options.FirstOrDefault(o => o.Key == _target?.Key) ?? options[0];
 
         for (var i = 0; i < options.Count; i += 2)
         {
@@ -323,25 +325,59 @@ public class MainActivity : Activity
                 row.AddView(new View(this), Kit.Weighted(1, _kit.Dp(10)));
             _targetsBox.AddView(row, Kit.Fill(i == 0 ? 0 : _kit.Dp(10)));
         }
+
+        if (_target.Compress)
+            _targetsBox.AddView(LevelPicker(), Kit.Fill(_kit.Dp(16)));
+    }
+
+    /// <summary>Leve / Média / Forte, com a explicação do nível escolhido embaixo.</summary>
+    private View LevelPicker()
+    {
+        var colors = _kit.Colors;
+        var box = _kit.Column();
+        box.AddView(_kit.SectionTitle("Quanto comprimir"));
+        var row = _kit.Row();
+        foreach (var level in CompressionLevel.All)
+        {
+            var selected = level == _level;
+            var chip = _kit.Text(level.Label, 15, selected ? colors.OnAccent : colors.Text, bold: true);
+            chip.Gravity = GravityFlags.Center;
+            chip.SetPadding(0, _kit.Dp(10), 0, _kit.Dp(10));
+            chip.Background = selected
+                ? _kit.Pressable(colors.Accent, 12)
+                : _kit.Pressable(colors.Surface, 12, colors.Border);
+            chip.Clickable = true;
+            chip.Click += (_, _) =>
+            {
+                if (_busy)
+                    return;
+                _level = level;
+                RenderTargets();
+            };
+            row.AddView(chip, Kit.Weighted(1, level == CompressionLevel.All[0] ? 0 : _kit.Dp(8)));
+        }
+        box.AddView(row, Kit.Fill(_kit.Dp(8)));
+        box.AddView(_kit.Text(_level.Description, 13, colors.Muted), Kit.Fill(_kit.Dp(8)));
+        return box;
     }
 
     private View TargetChip(TargetOption option)
     {
         var colors = _kit.Colors;
-        var selected = option.Format == _target;
+        var selected = option.Key == _target?.Key;
         var chip = _kit.Column(12);
         chip.Background = selected
             ? _kit.Pressable(colors.AccentSoft, 14, colors.Accent, 2)
             : _kit.Pressable(colors.Surface, 14, colors.Border);
         chip.Clickable = true;
         chip.Focusable = true;
-        chip.AddView(_kit.Text(option.Format.Label, 17, selected ? colors.Accent : colors.Text, bold: true));
+        chip.AddView(_kit.Text(option.Label, 17, selected ? colors.Accent : colors.Text, bold: true));
         chip.AddView(_kit.Text(option.Description, 12, colors.Muted), Kit.Fill(_kit.Dp(2)));
         chip.Click += (_, _) =>
         {
             if (_busy)
                 return;
-            _target = option.Format;
+            _target = option;
             RenderTargets();
             RenderConvertButton();
         };
@@ -351,7 +387,12 @@ public class MainActivity : Activity
     private void RenderConvertButton()
     {
         var ready = !_busy && _files.Count > 0 && _target is not null;
-        _convertButton.Text = _target is null ? "Converter" : $"Converter para {_target.Label}";
+        _convertButton.Text = _target switch
+        {
+            null => "Converter",
+            { Compress: true } => _files.Count > 1 ? $"Comprimir {_files.Count} arquivos" : "Comprimir",
+            _ => $"Converter para {_target.Format.Label}",
+        };
         _convertButton.Enabled = ready;
         _convertButton.Alpha = ready ? 1f : 0.45f;
     }
@@ -390,7 +431,8 @@ public class MainActivity : Activity
         ScrollToEnd();
     }
 
-    private void ShowResult(IReadOnlyList<SavedFile> saved, IReadOnlyList<string> errors)
+    /// <param name="inputBytes">Ao comprimir: tamanho total dos originais, para mostrar quanto diminuiu.</param>
+    private void ShowResult(IReadOnlyList<SavedFile> saved, IReadOnlyList<string> errors, long? inputBytes = null)
     {
         var colors = _kit.Colors;
         _resultCard.RemoveAllViews();
@@ -401,9 +443,23 @@ public class MainActivity : Activity
             var where = saved.Count == 1 ? "Salvo em Downloads › Conversor" : $"{saved.Count} arquivos salvos em Downloads › Conversor";
             _resultCard.AddView(_kit.Text(where, 14, colors.Muted), Kit.Fill(_kit.Dp(4)));
 
+            if (inputBytes is { } before && before > 0)
+            {
+                var after = saved.Sum(f => f.Size);
+                var percent = (int)Math.Round(100.0 * (before - after) / before);
+                var summary = after < before
+                    ? $"{SizeLabel(before)} → {SizeLabel(after)}  ({percent}% menor)"
+                    : "Os arquivos já estavam otimizados: não deu para diminuir mais.";
+                _resultCard.AddView(_kit.Text(summary, 16, after < before ? colors.Accent : colors.Text, bold: true),
+                    Kit.Fill(_kit.Dp(10)));
+            }
+
             const int shown = 6;
             foreach (var file in saved.Take(shown))
-                _resultCard.AddView(_kit.SingleLine("• " + file.Name, 14, colors.Text), Kit.Fill(_kit.Dp(6)));
+            {
+                var line = "• " + file.Name + (file.NotSmaller ? "  (já estava otimizado)" : "");
+                _resultCard.AddView(_kit.SingleLine(line, 14, colors.Text), Kit.Fill(_kit.Dp(6)));
+            }
             if (saved.Count > shown)
                 _resultCard.AddView(_kit.Text($"+ {saved.Count - shown} outros", 14, colors.Muted), Kit.Fill(_kit.Dp(6)));
 
@@ -423,7 +479,8 @@ public class MainActivity : Activity
 
         if (errors.Count > 0)
         {
-            var title = saved.Count > 0 ? "Alguns arquivos não foram convertidos" : "Não foi possível converter";
+            var verb = inputBytes is null ? "convertidos" : "comprimidos";
+            var title = saved.Count > 0 ? $"Alguns arquivos não foram {verb}" : $"Não foi possível {(inputBytes is null ? "converter" : "comprimir")}";
             _resultCard.AddView(_kit.Text(title, 15, colors.Error, bold: true), Kit.Fill(saved.Count > 0 ? _kit.Dp(18) : 0));
             foreach (var error in errors)
                 _resultCard.AddView(_kit.Text(error, 13, colors.Text), Kit.Fill(_kit.Dp(6)));
@@ -546,6 +603,7 @@ public class MainActivity : Activity
         if (_busy || _target is null || _files.Count == 0)
             return;
         var target = _target;
+        var level = _level;
         var inputs = _files.ToList();
         var work = Path.Combine(OutputFolder, Guid.NewGuid().ToString("N"));
         var cancel = _cancel = new CancellationTokenSource();
@@ -563,7 +621,7 @@ public class MainActivity : Activity
 
         try
         {
-            var result = await Task.Run(() => ConversionJob.RunAsync(inputs, target, work, progress, cancel.Token), cancel.Token);
+            var result = await Task.Run(() => ConversionJob.RunAsync(inputs, target, level, work, progress, cancel.Token), cancel.Token);
             _progressText.Text = "Salvando em Downloads…";
             var saveErrors = new List<string>();
             var saved = await Task.Run(() =>
@@ -583,12 +641,12 @@ public class MainActivity : Activity
                 return list;
             });
             HideProgress();
-            ShowResult(saved, [.. result.Errors, .. saveErrors]);
+            ShowResult(saved, [.. result.Errors, .. saveErrors], target.Compress ? inputs.Sum(f => f.Size) : null);
         }
         catch (System.OperationCanceledException)
         {
             HideProgress();
-            ShowNotice("Conversão cancelada.", error: false);
+            ShowNotice(target.Compress ? "Compressão cancelada." : "Conversão cancelada.", error: false);
         }
         catch (Exception e)
         {

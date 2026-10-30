@@ -10,7 +10,8 @@ internal sealed record PickedFile(string LocalPath, string Name, long Size, File
 
 /// <summary>Um arquivo convertido, ainda na pasta temporária.</summary>
 /// <param name="Name">Nome com que vai ser salvo em Downloads.</param>
-internal sealed record ConvertedFile(string LocalPath, string Name, FileFormat Format);
+/// <param name="NotSmaller">Ao comprimir: o arquivo já estava otimizado, então a saída é uma cópia do original.</param>
+internal sealed record ConvertedFile(string LocalPath, string Name, FileFormat Format, bool NotSmaller = false);
 
 /// <summary>Andamento: fração de 0 a 1 e o texto mostrado embaixo da barra.</summary>
 internal sealed record JobProgress(double Fraction, string Message);

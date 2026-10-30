@@ -90,6 +90,36 @@ internal static class ImageCodec
             throw new IOException($"O Android não conseguiu gravar o {format.Label}.");
     }
 
+    /// <summary>
+    /// A imagem com o lado maior em no máximo <paramref name="maxSide"/> pixels. Reduz pela metade enquanto dá (fica
+    /// mais nítido que reduzir de uma vez) e ajusta no fim. Devolve o próprio <paramref name="bitmap"/> se já cabe;
+    /// senão um bitmap novo (o original continua com quem chamou).
+    /// </summary>
+    public static Bitmap Downscale(Bitmap bitmap, int maxSide)
+    {
+        var longest = Math.Max(bitmap.Width, bitmap.Height);
+        if (longest <= maxSide)
+            return bitmap;
+        var scale = (double)maxSide / longest;
+        var width = Math.Max(1, (int)Math.Round(bitmap.Width * scale));
+        var height = Math.Max(1, (int)Math.Round(bitmap.Height * scale));
+
+        var current = bitmap;
+        while (current.Width / 2 >= width && current.Height / 2 >= height)
+            current = Step(current, current.Width / 2, current.Height / 2);
+        if (current.Width != width || current.Height != height)
+            current = Step(current, width, height);
+        return current;
+
+        Bitmap Step(Bitmap from, int w, int h)
+        {
+            var next = Bitmap.CreateScaledBitmap(from, w, h, true) ?? throw new OutOfMemoryException();
+            if (!ReferenceEquals(from, bitmap))
+                Release(from);
+            return next;
+        }
+    }
+
     /// <summary>JPG não tem transparência: as partes transparentes ficam brancas (e não pretas).</summary>
     public static T WithoutTransparency<T>(Bitmap bitmap, Func<Bitmap, T> use)
     {
