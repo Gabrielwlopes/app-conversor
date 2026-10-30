@@ -30,7 +30,12 @@ Não precisa instalar nada no computador. A cada envio para a branch `main`, o *
 2. instala o .NET 10 e o suporte a Android;
 3. roda os testes do núcleo (`tests/Conversor.Core.Checks`);
 4. compila e assina o APK;
-5. publica o APK em **Releases** e como artefato da execução, na aba **Actions**.
+5. **autoteste**: liga um Android 13 emulado, gera PDFs e imagens de exemplo dentro dele e confere cada conversão
+   (PDF → Word, texto, JPG e PNG; imagens → PNG, WebP, TIFF e PDF; salvar em Downloads). O relatório, com capturas de
+   tela, fica na branch [`autoteste`](../../tree/autoteste);
+6. só se tudo passar, publica o APK em **Releases**.
+
+Mudanças só em arquivos `.md` (como este) não geram APK novo.
 
 Para gerar de novo sem mudar código: aba **Actions** › **Compilar APK** › **Run workflow**.
 
