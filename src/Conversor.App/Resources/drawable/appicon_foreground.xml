@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone: uma folha com canto dobrado e duas setas (converter de um formato para outro). Área útil 108 × 108. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <path
+      android:fillColor="#FFFFFF"
+      android:pathData="M39,24 H64 L76,36 V80 Q76,85 71,85 H39 Q34,85 34,80 V29 Q34,24 39,24 Z" />
+  <path
+      android:fillColor="#C9C4F5"
+      android:pathData="M64,24 V32 Q64,36 68,36 H76 Z" />
+  <path
+      android:strokeColor="#5B4FD6"
+      android:strokeWidth="4"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:fillColor="#00000000"
+      android:pathData="M42,51 H65 M59,45 L65,51 L59,57" />
+  <path
+      android:strokeColor="#5B4FD6"
+      android:strokeWidth="4"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:fillColor="#00000000"
+      android:pathData="M68,68 H45 M51,62 L45,68 L51,74" />
+</vector>

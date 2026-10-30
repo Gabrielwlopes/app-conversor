@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Tema claro. A barra de status fica roxa (a mesma cor do topo da tela), com ícones brancos. -->
+  <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+    <item name="android:colorAccent">#5B4FD6</item>
+    <item name="android:colorPrimary">#5B4FD6</item>
+    <item name="android:colorPrimaryDark">#5B4FD6</item>
+    <item name="android:statusBarColor">#5B4FD6</item>
+    <item name="android:windowLightStatusBar">false</item>
+    <item name="android:navigationBarColor">#F6F5FB</item>
+    <item name="android:windowLightNavigationBar">true</item>
+    <item name="android:windowBackground">@color/screen_background</item>
+  </style>
+</resources>

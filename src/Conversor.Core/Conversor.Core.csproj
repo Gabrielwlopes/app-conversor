@@ -1,0 +1,17 @@
+<!--
+  Conversor.Core: a parte do app que não depende do Android (detecção de formato, opções de conversão, nomes dos
+  arquivos de saída, leitura e gravação de TIFF). Sem pacotes externos, então compila e é testada em qualquer máquina.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Conversor.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Conversor.Core.Checks" />
+  </ItemGroup>
+</Project>

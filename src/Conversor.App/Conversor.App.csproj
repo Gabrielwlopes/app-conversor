@@ -1,0 +1,61 @@
+<!--
+  O app Android. Escrito em C# (.NET para Android) para usar diretamente o código do Filee
+  (external/Filee, submódulo git): o PDF para Word e o PDF para texto são feitos pelo motor do próprio Filee.
+  O resto usa os recursos nativos do Android e o Conversor.Core.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <!-- Android 10 ou mais novo: salvar em Downloads sem pedir permissão precisa dele. -->
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Conversor.App</RootNamespace>
+    <AssemblyName>Conversor</AssemblyName>
+
+    <ApplicationTitle>Conversor</ApplicationTitle>
+    <ApplicationId>com.gabrielwlopes.conversor</ApplicationId>
+    <!-- Aumente os dois a cada nova versão (o número de baixo precisa sempre crescer para o Android aceitar a atualização). -->
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <!-- Celulares de 64 e 32 bits. -->
+    <RuntimeIdentifiers>android-arm64;android-arm</RuntimeIdentifiers>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <!-- Sem "enxugar" código: as bibliotecas do Filee usam recursos que o trimming poderia remover. -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+
+    <!-- CA1416/CA1422: avisos de plataforma vindos do código de desktop do Filee. -->
+    <NoWarn>$(NoWarn);CA1416;CA1422;NU1608</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Assinatura do APK. Com a mesma chave em todas as versões, o celular aceita instalar uma versão nova por cima da
+    antiga. A chave fica no repositório (que é privado). Se um dia publicar na Play Store, gere uma chave nova e guarde
+    a senha nos Secrets do GitHub.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <AndroidKeyStore>true</AndroidKeyStore>
+    <AndroidSigningKeyStore>conversor.keystore</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>conversor</AndroidSigningKeyAlias>
+    <AndroidSigningStorePass>XBkqP1tnAeDf1yJxzJ-24lqo</AndroidSigningStorePass>
+    <AndroidSigningKeyPass>XBkqP1tnAeDf1yJxzJ-24lqo</AndroidSigningKeyPass>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Conversor.Core\Conversor.Core.csproj" />
+    <!-- O motor de conversão do Filee (PdfPig + gerador de DOCX próprio). -->
+    <ProjectReference Include="..\..\external\Filee\src\Filee.Engines\Filee.Engines.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Bibliotecas nativas para Android das dependências do Filee: SkiaSharp (imagens) e PDFium (páginas
+         digitalizadas dentro de PDFs). A versão do SkiaSharp é a mesma que o Filee usa. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Android" Version="3.119.4" />
+    <PackageReference Include="bblanchon.PDFium.Android" Version="158.0.8125" />
+  </ItemGroup>
+</Project>

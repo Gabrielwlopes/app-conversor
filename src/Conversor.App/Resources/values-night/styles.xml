@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Tema escuro (quando o celular está no modo escuro). -->
+  <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+    <item name="android:colorAccent">#8E85F0</item>
+    <item name="android:colorPrimary">#3A3291</item>
+    <item name="android:colorPrimaryDark">#3A3291</item>
+    <item name="android:statusBarColor">#3A3291</item>
+    <item name="android:windowLightStatusBar">false</item>
+    <item name="android:navigationBarColor">#121117</item>
+    <item name="android:windowLightNavigationBar">false</item>
+    <item name="android:windowBackground">@color/screen_background</item>
+  </style>
+</resources>

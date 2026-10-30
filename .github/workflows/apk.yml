@@ -1,0 +1,84 @@
+# Compila o APK a cada envio para a branch main (e quando você clica em "Run workflow" na aba Actions).
+# O APK fica em Releases (para baixar direto no celular) e também como artefato da execução.
+name: Compilar APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write # para criar a Release com o APK
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true # traz o Filee (external/Filee)
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Instalar o suporte a Android do .NET
+        run: dotnet workload install android
+
+      - name: Testar o núcleo (formatos e TIFF)
+        run: dotnet run --project tests/Conversor.Core.Checks -c Release
+
+      - name: Instalar o que falta do Android SDK
+        run: >
+          dotnet build src/Conversor.App/Conversor.App.csproj
+          -t:InstallAndroidDependencies -f net10.0-android
+          "-p:AndroidSdkDirectory=$ANDROID_SDK_ROOT" "-p:AcceptAndroidSDKLicenses=True"
+
+      - name: Gerar o APK
+        run: >
+          dotnet publish src/Conversor.App/Conversor.App.csproj
+          -f net10.0-android -c Release
+          "-p:AndroidSdkDirectory=$ANDROID_SDK_ROOT"
+          -o out
+
+      - name: Preparar o arquivo
+        id: apk
+        run: |
+          apk=$(find out src/Conversor.App/bin -name '*-Signed.apk' | head -n 1)
+          test -n "$apk" || { echo "APK não encontrado"; exit 1; }
+          version=$(grep -oP '(?<=<ApplicationDisplayVersion>)[^<]+' src/Conversor.App/Conversor.App.csproj)
+          name="Conversor-${version}-build${GITHUB_RUN_NUMBER}.apk"
+          cp "$apk" "$name"
+          ls -la "$name"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: ${{ steps.apk.outputs.name }}
+          if-no-files-found: error
+
+      - name: Publicar em Releases
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v${{ steps.apk.outputs.version }}-build${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" "${{ steps.apk.outputs.name }}" \
+            --title "Conversor ${{ steps.apk.outputs.version }} (build ${GITHUB_RUN_NUMBER})" \
+            --notes "APK gerado automaticamente a partir do commit ${GITHUB_SHA::7}. Baixe o arquivo .apk abaixo no celular para instalar." \
+            --target "$GITHUB_SHA"

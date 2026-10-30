@@ -1,0 +1,10 @@
+bin/
+obj/
+out/
+*.apk
+*.aab
+.vs/
+.vscode/
+.idea/
+*.user
+tests/tools/__pycache__/
