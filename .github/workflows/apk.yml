@@ -131,6 +131,24 @@ jobs:
             emulador.log
           if-no-files-found: ignore
 
+      # Guarda as capturas de tela e os registros do autoteste na branch "autoteste" (fácil de abrir no GitHub).
+      - name: Publicar o relatório do autoteste
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          report=$(mktemp -d)
+          cp -r autoteste "$report/" 2>/dev/null || true
+          cp emulador.log "$report/" 2>/dev/null || true
+          cd "$report"
+          printf '# Autoteste — execução %s (commit %s)\n\n' "$GITHUB_RUN_NUMBER" "${GITHUB_SHA::7}" > README.md
+          if [ -f autoteste/resultado.txt ]; then sed 's/^/    /' autoteste/resultado.txt >> README.md; fi
+          for image in autoteste/*.png; do [ -f "$image" ] && printf '\n![%s](%s)\n' "$image" "$image" >> README.md; done
+          git init -q -b autoteste
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" commit -qm "Autoteste da execução $GITHUB_RUN_NUMBER"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" autoteste
+
   release:
     needs: [apk, autoteste]
     if: github.ref == 'refs/heads/main'
