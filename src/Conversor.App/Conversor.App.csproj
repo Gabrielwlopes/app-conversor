@@ -34,6 +34,15 @@
   </PropertyGroup>
 
   <!--
+    APK de teste do GitHub Actions (ConversorSelfTest=true): para o emulador (x86_64) e com o autoteste (SelfTest.cs).
+    O APK publicado nunca tem isso.
+  -->
+  <PropertyGroup Condition="'$(ConversorSelfTest)' == 'true'">
+    <RuntimeIdentifiers>android-x64</RuntimeIdentifiers>
+    <DefineConstants>$(DefineConstants);SELFTEST</DefineConstants>
+  </PropertyGroup>
+
+  <!--
     Assinatura do APK. Com a mesma chave em todas as versões, o celular aceita instalar uma versão nova por cima da
     antiga. A chave fica no repositório (que é privado). Se um dia publicar na Play Store, gere uma chave nova e guarde
     a senha nos Secrets do GitHub.
@@ -58,4 +67,15 @@
     <PackageReference Include="SkiaSharp.NativeAssets.Android" Version="3.119.4" />
     <PackageReference Include="bblanchon.PDFium.Android" Version="158.0.8125" />
   </ItemGroup>
+
+  <!--
+    O Filee traz o ImageMagick para computador (Linux, Windows, macOS). No Android ele não funciona (o app usa os
+    codificadores do próprio Android), então a biblioteca nativa dele fica fora do APK: cerca de 15 MB a menos.
+  -->
+  <Target Name="RemoveDesktopNativeLibraries" AfterTargets="ResolvePackageAssets">
+    <ItemGroup>
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" Condition="'%(NativeCopyLocalItems.NuGetPackageId)' == 'Magick.NET-Q8-AnyCPU'" />
+      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)" Condition="'%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'Magick.NET-Q8-AnyCPU'" />
+    </ItemGroup>
+  </Target>
 </Project>

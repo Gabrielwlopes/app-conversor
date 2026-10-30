@@ -1,5 +1,7 @@
 # Compila o APK a cada envio para a branch main (e quando você clica em "Run workflow" na aba Actions).
-# O APK fica em Releases (para baixar direto no celular) e também como artefato da execução.
+#   apk:       gera o APK assinado (celulares ARM de 64 e 32 bits)
+#   autoteste: gera uma versão de teste, liga um Android emulado e converte arquivos de exemplo de verdade
+#   release:   se as duas deram certo, publica o APK em Releases (para baixar direto no celular)
 name: Compilar APK
 
 on:
@@ -14,13 +16,17 @@ concurrency:
   group: apk-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
 jobs:
   apk:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    env:
-      DOTNET_NOLOGO: "1"
-      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    outputs:
+      name: ${{ steps.apk.outputs.name }}
+      version: ${{ steps.apk.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -62,23 +68,92 @@ jobs:
           version=$(grep -oP '(?<=<ApplicationDisplayVersion>)[^<]+' src/Conversor.App/Conversor.App.csproj)
           name="Conversor-${version}-build${GITHUB_RUN_NUMBER}.apk"
           cp "$apk" "$name"
-          ls -la "$name"
+          echo "Tamanho: $(du -h "$name" | cut -f1)"
+          unzip -l "$name" | grep -E '\.so$' | sort -k1 -n -r | head -20
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.apk.outputs.name }}
+          name: apk
           path: ${{ steps.apk.outputs.name }}
           if-no-files-found: error
 
+  autoteste:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Instalar o suporte a Android do .NET
+        run: dotnet workload install android
+
+      - name: Instalar o que falta do Android SDK
+        run: >
+          dotnet build src/Conversor.App/Conversor.App.csproj
+          -t:InstallAndroidDependencies -f net10.0-android
+          "-p:AndroidSdkDirectory=$ANDROID_SDK_ROOT" "-p:AcceptAndroidSDKLicenses=True"
+
+      - name: Gerar o APK de teste (x86_64, com autoteste)
+        run: >
+          dotnet publish src/Conversor.App/Conversor.App.csproj
+          -f net10.0-android -c Release
+          "-p:AndroidSdkDirectory=$ANDROID_SDK_ROOT"
+          -p:ConversorSelfTest=true
+          -o test-out
+
+      - name: Ativar KVM (emulador rápido)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Converter arquivos de exemplo no emulador (Android 15)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: bash .github/scripts/autoteste.sh test-out
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: autoteste
+          path: autoteste/
+          if-no-files-found: ignore
+
+  release:
+    needs: [apk, autoteste]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: apk
+
       - name: Publicar em Releases
-        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
+          NAME: ${{ needs.apk.outputs.name }}
+          VERSION: ${{ needs.apk.outputs.version }}
         run: |
-          tag="v${{ steps.apk.outputs.version }}-build${GITHUB_RUN_NUMBER}"
-          gh release create "$tag" "${{ steps.apk.outputs.name }}" \
-            --title "Conversor ${{ steps.apk.outputs.version }} (build ${GITHUB_RUN_NUMBER})" \
-            --notes "APK gerado automaticamente a partir do commit ${GITHUB_SHA::7}. Baixe o arquivo .apk abaixo no celular para instalar." \
+          tag="v${VERSION}-build${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" "$NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Conversor ${VERSION} (build ${GITHUB_RUN_NUMBER})" \
+            --notes "APK gerado e testado automaticamente a partir do commit ${GITHUB_SHA::7}. Baixe o arquivo .apk abaixo no celular para instalar." \
             --target "$GITHUB_SHA"

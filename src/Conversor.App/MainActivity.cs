@@ -15,6 +15,7 @@ namespace Conversor.App;
 /// converter e abrir/compartilhar o resultado, que fica salvo em Downloads/Conversor.
 /// </summary>
 [Activity(
+    Name = "com.gabrielwlopes.conversor.MainActivity",
     Label = "@string/app_name",
     MainLauncher = true,
     Exported = true,
@@ -60,9 +61,31 @@ public class MainActivity : Activity
         }
         SetContentView(BuildScreen());
         Render();
+#if SELFTEST
+        if (savedInstanceState is null && Intent?.GetBooleanExtra("selftest", false) == true)
+        {
+            _ = RunSelfTestAsync();
+            return;
+        }
+#endif
         if (savedInstanceState is null)
             HandleIncoming(Intent);
     }
+
+#if SELFTEST
+    /// <summary>Só no APK de teste: converte arquivos de exemplo e mostra o relatório na tela.</summary>
+    private async Task RunSelfTestAsync()
+    {
+        SetBusy(true);
+        ShowProgress("Autoteste: convertendo arquivos de exemplo…", indeterminate: true, cancellable: false);
+        var (lines, passed, samples) = await Task.Run(() => SelfTest.RunAsync(this));
+        HideProgress();
+        SetBusy(false);
+        _files.AddRange(samples);
+        Render();
+        ShowNotice((passed ? "Autoteste OK" : "Autoteste com falhas") + "\n\n" + string.Join("\n", lines), error: !passed);
+    }
+#endif
 
     protected override void OnNewIntent(Intent? intent)
     {
