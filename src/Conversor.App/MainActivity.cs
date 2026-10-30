@@ -562,7 +562,7 @@ public class MainActivity : Activity
             HideProgress();
             ShowResult(saved, [.. result.Errors, .. saveErrors]);
         }
-        catch (OperationCanceledException)
+        catch (System.OperationCanceledException)
         {
             HideProgress();
             ShowNotice("Conversão cancelada.", error: false);
