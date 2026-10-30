@@ -119,23 +119,16 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Converter arquivos de exemplo no emulador (Android 13)
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 33
-          arch: x86_64
-          target: google_apis
-          ram-size: 3072M
-          emulator-boot-timeout: 900
-          disable-animations: true
-          emulator-options: -no-window -no-snapshot -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: bash .github/scripts/autoteste.sh test-out
+      - name: Converter arquivos de exemplo num Android 13 emulado
+        run: bash .github/scripts/emulador.sh test-out
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: autoteste
-          path: autoteste/
+          path: |
+            autoteste/
+            emulador.log
           if-no-files-found: ignore
 
   release:
