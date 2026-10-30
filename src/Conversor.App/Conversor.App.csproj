@@ -69,13 +69,14 @@
   </ItemGroup>
 
   <!--
-    O Filee traz o ImageMagick para computador (Linux, Windows, macOS). No Android ele não funciona (o app usa os
-    codificadores do próprio Android), então a biblioteca nativa dele fica fora do APK: cerca de 15 MB a menos.
+    Algumas dependências do Filee trazem bibliotecas nativas feitas para Linux de computador (ImageMagick, leitor de
+    HWP). No Android elas não funcionam e o app não as usa (as imagens passam pelos codificadores do próprio Android),
+    então ficam fora do APK: cerca de 15 MB a menos.
   -->
   <Target Name="RemoveDesktopNativeLibraries" AfterTargets="ResolvePackageAssets">
     <ItemGroup>
-      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)" Condition="'%(NativeCopyLocalItems.NuGetPackageId)' == 'Magick.NET-Q8-AnyCPU'" />
-      <RuntimeTargetsCopyLocalItems Remove="@(RuntimeTargetsCopyLocalItems)" Condition="'%(RuntimeTargetsCopyLocalItems.NuGetPackageId)' == 'Magick.NET-Q8-AnyCPU'" />
+      <NativeCopyLocalItems Remove="@(NativeCopyLocalItems)"
+          Condition="'%(NativeCopyLocalItems.NuGetPackageId)' == 'Magick.NET-Q8-AnyCPU' or '%(NativeCopyLocalItems.NuGetPackageId)' == 'Unhwp'" />
     </ItemGroup>
   </Target>
 </Project>
