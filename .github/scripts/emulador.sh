@@ -9,6 +9,9 @@ image="system-images;android-${api};google_apis;x86_64"
 sdk="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
 tools="$sdk/cmdline-tools/latest/bin"
 export PATH="$sdk/platform-tools:$sdk/emulator:$PATH"
+# O avdmanager e o emulador procuram os aparelhos virtuais em pastas diferentes; fixa uma só.
+export ANDROID_AVD_HOME="$HOME/.android/avd"
+mkdir -p "$ANDROID_AVD_HOME"
 log="$PWD/emulador.log"
 : > "$log"
 
