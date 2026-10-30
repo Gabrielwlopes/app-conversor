@@ -18,7 +18,10 @@ fail() {
 }
 
 echo "Instalando a imagem do Android $api…"
-yes | "$tools/sdkmanager" --install "$image" "emulator" "platform-tools" >> "$log" 2>&1 || fail "sdkmanager"
+df -h / >> "$log"
+# "yes" aceita as licenças; o código de saída que importa é o do sdkmanager (o do "yes" é sempre de erro).
+yes 2> /dev/null | "$tools/sdkmanager" --install "$image" "emulator" "platform-tools" >> "$log" 2>&1
+[ "${PIPESTATUS[1]}" = 0 ] || fail "sdkmanager"
 
 echo "Criando o aparelho virtual…"
 echo no | "$tools/avdmanager" create avd -n teste -k "$image" -d pixel_6 --force >> "$log" 2>&1 || fail "avdmanager"
