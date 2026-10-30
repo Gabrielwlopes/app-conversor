@@ -1,0 +1,27 @@
+# Autoteste — execução 12 (commit ba0cdd4)
+
+    --------- beginning of main
+    OK detecção de formato: 5 arquivos (0.0s)
+    OK PDF → DOCX (motor do Filee): 4 KB, texto ok (3.3s)
+    OK PDF digitalizado → DOCX (Filee + PDFium): 1 imagem(ns) no DOCX (1.2s)
+    OK PDF → TXT (motor do Filee): 284 caracteres (0.1s)
+    OK PDF → PNG (uma por página): 2 imagens, 1239×1754, Relatório de teste_p01.png, Relatório de teste_p02.png (0.9s)
+    OK PDF → JPG: 1239×1754 (0.3s)
+    OK JPG → PNG: 24 KB (0.1s)
+    OK JPG → WebP: 6 KB (0.1s)
+    OK JPG → TIFF: 34 KB (0.1s)
+    OK PNG com transparência → JPG: fundo branco (0.0s)
+    OK TIFF → PNG: 640×480 (0.1s)
+    OK imagens → um PDF: 3 páginas, 29 KB (0.7s)
+    OK comprimir PDF digitalizado (forte): 3618 KB → 41 KB (0.3s)
+    OK comprimir PDF de texto (o texto continua): 180 KB → 180 KB (já otimizado) (0.1s)
+    OK comprimir foto grande (média): 3000×2000 113 KB → 2560×1707 39 KB (0.2s)
+    OK comprimir PNG com transparência: já estava otimizado (cópia do original) (0.1s)
+    OK salvar em Downloads: autoteste-conversor.txt (content://media/external/downloads/1000000017), removido: 1 (0.9s)
+    SELFTEST PASSED
+
+![autoteste/1-durante.png](autoteste/1-durante.png)
+
+![autoteste/2-resultado.png](autoteste/2-resultado.png)
+
+![autoteste/3-rolado.png](autoteste/3-rolado.png)
