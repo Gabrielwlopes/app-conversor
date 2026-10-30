@@ -169,7 +169,7 @@ internal static class SelfTest
         {
             var file = await Compress(scanPdf, CompressionLevel.Strong, folder);
             var after = new FileInfo(file.LocalPath).Length;
-            Expect(!file.NotSmaller && after < scanPdf.Size, $"não diminuiu: {scanPdf.Size} → {after} bytes");
+            Expect(!file.NotSmaller && after < scanPdf.Size * 0.7, $"diminuiu pouco: {scanPdf.Size} → {after} bytes");
             Expect(file.Name == "Digitalizado_comprimido.pdf", "nome: " + file.Name);
             using var pdf = UglyToad.PdfPig.PdfDocument.Open(file.LocalPath);
             Expect(pdf.NumberOfPages == 1, "páginas: " + pdf.NumberOfPages);
@@ -338,6 +338,23 @@ internal static class SelfTest
             ink.TextSize = 30f;
             for (var i = 0; i < 20; i++)
                 canvas.DrawText($"Linha {i + 1} de um papel que passou pelo scanner.", 120, 340 + i * 56, ink);
+        }
+        // Ruído de cor, como num scan de verdade (papel e sensor): sem ele a página seria um "desenho" de poucas cores,
+        // que o compressor do Filee guarda sem perdas, e o teste não passaria pelo caminho do JPEG.
+        var random = new Random(7);
+        var row = new int[scan.Width];
+        for (var y = 0; y < scan.Height; y++)
+        {
+            scan.GetPixels(row, 0, scan.Width, 0, y, scan.Width, 1);
+            for (var x = 0; x < row.Length; x++)
+            {
+                var c = row[x];
+                int r = Math.Clamp(((c >> 16) & 0xFF) - random.Next(12), 0, 255);
+                int g = Math.Clamp(((c >> 8) & 0xFF) - random.Next(12), 0, 255);
+                int b = Math.Clamp((c & 0xFF) - random.Next(16), 0, 255);
+                row[x] = unchecked((int)0xFF000000) | r << 16 | g << 8 | b;
+            }
+            scan.SetPixels(row, 0, scan.Width, 0, y, scan.Width, 1);
         }
         var document = new Android.Graphics.Pdf.PdfDocument();
         try
