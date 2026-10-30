@@ -83,6 +83,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
+      # O emulador precisa de vários GB: apaga ferramentas pré-instaladas no servidor que este projeto não usa.
+      - name: Liberar espaço em disco
+        run: |
+          df -h /
+          sudo rm -rf /opt/ghc /usr/local/.ghcup /usr/share/swift /usr/local/share/boost \
+            /opt/hostedtoolcache/CodeQL /usr/local/lib/android/sdk/ndk /usr/local/share/powershell \
+            /usr/local/julia* /opt/microsoft/msedge /opt/google/chrome /usr/lib/jvm/java-8-* /usr/lib/jvm/java-11-*
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+          df -h /
+
       - uses: actions/checkout@v7
         with:
           submodules: true
